@@ -196,7 +196,7 @@ void setup() {
     myPID.SetMode(AUTOMATIC);
     // put your setup code here, to run once:
 }
-void go_front(){
+double go_front(){
     //int err;
     int *value = NULL;
     value = Get_value();
@@ -207,6 +207,7 @@ void go_front(){
     //Serial.println("----------------------");
     Run_motor(front_motor,front_motor);
     Run_direct(direc_control);
+    return direc_control;
 }
 //旨在判断这坨屎目前的状态，写不下去了，想似
 int where_are_you(int *value) {
@@ -223,8 +224,36 @@ int where_are_you(int *value) {
         go_front();
     }
 }
-void loop() {
-go_front();
 
+
+int left_out_of_control = 0;
+int right_out_of_control = 0;
+void where_are_you_pid(double error){
+    if(error >= 254&&right_out_of_control<=10){
+        right_out_of_control++;
+        left_out_of_control = 0;
+
+    }
+    else if(error <= 1 &&left_out_of_control<=10){
+        left_out_of_control++;
+        right_out_of_control = 0;
+
+    }
+    else if(error >= 254 && right_out_of_control >10){
+        right_out_of_control = 0;
+        go_right();
+    }
+    else if(error <= 1 && left_out_of_control >10){
+        left_out_of_control = 0;
+        go_left();
+    }
+}
+int *i;
+void loop() {
+    i = Get_value();
+    //where_are_you(i);
+    double error = go_front();
+    where_are_you_pid(error);
+    delay(10);
     // put your main code here, to run repeatedly:
 }

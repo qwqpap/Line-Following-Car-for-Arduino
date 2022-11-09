@@ -18,10 +18,6 @@
 //舵机
 #define direc 3
 
-//pid控制
-double p_pid = 0.8;
-double i_pid = 0;//关掉！关掉！一定要关掉！
-double d_pid = -0.02;
 
 //积分周期
 #define Cycle 10
@@ -45,8 +41,12 @@ double d_pid = -0.02;
 //锐角转弯函数
 //不思进取，只等开源（迫真
 double door_ji = 0;//舵机的预期值
-double fina;
-double direc_control;
+double fina;//误差值
+double direc_control = 128;
+double p_pid = 0.8;
+double i_pid = 0;//关掉！关掉！一定要关掉！
+double d_pid = -0.02;
+
 PID myPID(&fina, &direc_control, &door_ji, p_pid, i_pid, d_pid, DIRECT);
 void sharp_go_left() {
     analogWrite(motor_l_f,sharp_turn_back);
@@ -178,42 +178,18 @@ int *Get_value() {
     return res;
 }
 
-void setup() {
-    Serial.begin(57600);
-    //传感器
-    pinMode(sensor_0, INPUT);
-    pinMode(sensor_r1, INPUT);
-    pinMode(sensor_r2, INPUT);
-    pinMode(sensor_r3, INPUT);
-    pinMode(sensor_l1, INPUT);
-    pinMode(sensor_l2, INPUT);
-    pinMode(sensor_l3, INPUT);
-
-    //舵机，左右电机
-    pinMode(direc, OUTPUT);
-    pinMode(motor_l, OUTPUT);
-    pinMode(motor_r, OUTPUT);
-    myPID.SetMode(AUTOMATIC);
-    // put your setup code here, to run once:
-}
-double go_front(){
+void go_front(){
     //int err;
-    int *value = NULL;
-    value = Get_value();
-    fina = Value_count(value);
-    myPID.Compute();
-    //Pid_control(value);
-    free(value);
     //Serial.println("----------------------");
     Run_motor(front_motor,front_motor);
     Run_direct(direc_control);
-    return direc_control;
+
 }
 //旨在判断这坨屎目前的状态，写不下去了，想似
-int where_are_you(int *value) {
-    if (value[0] == 1 && value[1] != 1 && value[3] != 1) {
+void where_are_you(int *value) {
+    if (value[0] == 1 && value[1] != 1 && value[3] == 1) {
         sharp_go_left();
-    } else if (value[6] == 1 && value[5] != 1 && value[4] != 1) {
+    } else if (value[6] == 1 && value[5] != 1 && value[3] == 1) {
         sharp_go_right();
     } else if (value[0] == 1 && value[1] == 1 && value[3] == 1 && value[6] != 1) {
         go_left();
@@ -248,13 +224,34 @@ void where_are_you_pid(double error){
         go_left();
     }
 }
-int *i;
+void setup() {
+    Serial.begin(57600);
+    //传感器
+    pinMode(sensor_0, INPUT);
+    pinMode(sensor_r1, INPUT);
+    pinMode(sensor_r2, INPUT);
+    pinMode(sensor_r3, INPUT);
+    pinMode(sensor_l1, INPUT);
+    pinMode(sensor_l2, INPUT);
+    pinMode(sensor_l3, INPUT);
+
+    //舵机，左右电机
+    pinMode(direc, OUTPUT);
+    pinMode(motor_l, OUTPUT);
+    pinMode(motor_r, OUTPUT);
+    myPID.SetMode(AUTOMATIC);
+    // put your setup code here, to run once:
+}
 void loop() {
-    i = Get_value();
-    //where_are_you(i);
-    double error = go_front();
-    where_are_you_pid(error);
+    int *value = NULL;
+    value = Get_value();
+    fina = Value_count(value);
+    myPID.Compute();
+    //Pid_control(value);
+    Serial.println(fina);
+    where_are_you(value);
     delay(10);
+    free(value);
     // put your main code here, to run repeatedly:
 }
-//也许还要两个传感器
+//也许还要两

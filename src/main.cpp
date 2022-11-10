@@ -48,8 +48,12 @@ double direc_control = 128;
 double p_pid = 15;//28;//就是这个值可以让舵机在最左边传感器一个为黑的时候输出最左边值
 double i_pid = 0;//关掉！关掉！一定要关掉！
 double d_pid = 2;
-PID myPID(&fina, &direc_control, &door_ji, p_pid, i_pid, d_pid, REVERSE);
+PID myPID(&fina, &direc_control, &door_ji, p_pid, i_pid, d_pid, REVERSE);//pid库初始化
 
+//接下来这一堆都没用（暂时吧）请跳到104行
+//接下来这一堆都没用（暂时吧）请跳到104行
+//接下来这一堆都没用（暂时吧）请跳到104行
+//接下来这一堆都没用（暂时吧）请跳到104行
 //锐角转弯函数
 void sharp_go_left() {
     analogWrite(motor_l_f,sharp_turn_back);
@@ -113,10 +117,10 @@ double Value_count(int *value) {
     }
     if (count == 0){
         res = last_value;
-        count = 1;
+        count = 1;//防止除以0的操作
     }
     else{
-        last_value = res;
+        last_value = res;//但传感器无法获取任何值，保留上一次的值
     }
     Serial.print("now value count(with out /):");
     Serial.println(res);
@@ -126,7 +130,7 @@ double Value_count(int *value) {
     return return_value;
 }
 
-//pid控制   参数：   传感器数组
+//pid控制   参数：   传感器数组，没用了这个函数
 void Pid_control(int *value) {
     static int cycle;  //周期
     static int last_cycle = Cycle - 1;
@@ -165,7 +169,8 @@ void Pid_control(int *value) {
 
 
 
-//设置电机转速
+//设置电机转速，这里可能有点繁杂
+//主要是考虑了超过最大最小值（45，240）与输入的正负控制前后这件事
 void Run_motor(int speed_l, int speed_r) {
     if(speed_l >= 0 && speed_r >= 0){
         if(speed_l > 210){
@@ -246,7 +251,7 @@ void Run_motor(int speed_l, int speed_r) {
 }
 
 
-
+//控制舵机没啥好说的
 void Run_direct(double pwm){
     analogWrite(direc, pwm);
 }
@@ -283,10 +288,11 @@ void go_front(){
     }
 
     Run_motor(front_motor - right_less + left_less,front_motor -left_less + right_less);
+    //通过一个参数来让电机在舵机转过一个过大的值的时候利用电机反转来帮助其转向
     Run_direct(direc_control);
 
 }
-
+//没有用的函数增加了
 
 int left_out_of_control = 0;
 int right_out_of_control = 0;
@@ -326,8 +332,8 @@ void setup() {
     pinMode(motor_l, OUTPUT);
     pinMode(motor_r, OUTPUT);
     myPID.SetMode(AUTOMATIC);
-    myPID.SetOutputLimits(45,210);
-    myPID.SetSampleTime(50);
+    myPID.SetOutputLimits(45,210);//钳制pid输出范围
+    myPID.SetSampleTime(50);//设定Pid周期
     // put your setup code here, to run once:
 }
 void loop() {

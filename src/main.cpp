@@ -1,6 +1,6 @@
 //传感器
 #include "Arduino.h"
-#include "PID_v1.cpp"
+#include "PID_v1.h"
 #define sensor_0 A3
 #define sensor_r1 A4
 #define sensor_r2 A5
@@ -23,7 +23,7 @@
 #define Cycle 10
 
 //以下为直行的参数们
-#define front_motor 255
+#define front_motor 120
 
 //以下为关于直角转弯神秘参数们
 #define turn_front 160
@@ -43,11 +43,11 @@
 double door_ji = 0;//舵机的预期值
 double fina;//误差值
 double direc_control = 128;
-double p_pid = 0.8;
+double p_pid = 20;
 double i_pid = 0;//关掉！关掉！一定要关掉！
-double d_pid = -0.02;
+double d_pid = 2;
 
-PID myPID(&fina, &direc_control, &door_ji, p_pid, i_pid, d_pid, DIRECT);
+PID myPID(&fina, &direc_control, &door_ji, p_pid, i_pid, d_pid, REVERSE);
 void sharp_go_left() {
     analogWrite(motor_l_f,sharp_turn_back);
     analogWrite(motor_r,sharp_turn_front);//左电机反转，右边电机正转
@@ -96,12 +96,13 @@ int i_count(float values[Cycle]) {
 }
 //计算pid算法所需偏差值
 double Value_count(int *value) {
-    int res = 0;
+    double res = 0;
     int count = 0;
+    double return_value;
     for (int i = -3; i < 4; i++) {
-        Serial.print(i);
-        Serial.print(":");
-        Serial.println(value[i + 3]);
+        //Serial.print(i);
+        //Serial.print(":");
+        //Serial.println(value[i + 3]);
         res = res + i * value[i + 3];  //检测到是1，没检测到是0
         count = count + value[i + 3];
     }
@@ -110,7 +111,8 @@ double Value_count(int *value) {
     if (count == 0) { count = 1; }
     Serial.print("count:");
     Serial.println(count);
-    return (res / count);
+    return_value = (res / count);
+    return res;
 }
 
 //pid控制   参数：   传感器数组
@@ -248,10 +250,11 @@ void loop() {
     fina = Value_count(value);
     myPID.Compute();
     //Pid_control(value);
+    Serial.print("fina:");
     Serial.println(fina);
+    Serial.print("direct_conrtol:");
+    Serial.println(direc_control);
     where_are_you(value);
-    delay(10);
     free(value);
     // put your main code here, to run repeatedly:
 }
-//也许还要两

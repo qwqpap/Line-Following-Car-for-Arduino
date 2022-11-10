@@ -1,6 +1,7 @@
 //传感器
 #include "Arduino.h"
 #include "PID_v1.h"
+#include "math.h"
 #define sensor_0 A3
 #define sensor_r1 A4
 #define sensor_r2 A5
@@ -15,6 +16,8 @@
 #define motor_l 6
 #define motor_l_f 9
 #define motor_r_f 10
+#define motor_turn 60
+
 //舵机
 #define direc 3
 
@@ -23,7 +26,7 @@
 #define Cycle 10
 
 //以下为直行的参数们
-#define front_motor 120
+#define front_motor 90
 
 //以下为关于直角转弯神秘参数们
 #define turn_front 160
@@ -38,16 +41,16 @@
 #define sharp_direc_l 255 //锐角角右转的舵机方向
 #define sharp_turn_time 500//锐角转向的具体时间
 
-//锐角转弯函数
-//不思进取，只等开源（迫真
+//不思进取，只等开源（调用现成的库香到爆
 double door_ji = 0;//舵机的预期值
 double fina;//误差值
 double direc_control = 128;
-double p_pid = 20;
+double p_pid = 15;//28;//就是这个值可以让舵机在最左边传感器一个为黑的时候输出最左边值
 double i_pid = 0;//关掉！关掉！一定要关掉！
 double d_pid = 2;
-
 PID myPID(&fina, &direc_control, &door_ji, p_pid, i_pid, d_pid, REVERSE);
+
+//锐角转弯函数
 void sharp_go_left() {
     analogWrite(motor_l_f,sharp_turn_back);
     analogWrite(motor_r,sharp_turn_front);//左电机反转，右边电机正转
@@ -95,6 +98,8 @@ int i_count(float values[Cycle]) {
     return res;
 }
 //计算pid算法所需偏差值
+double last_value = 128;
+
 double Value_count(int *value) {
     double res = 0;
     int count = 0;
@@ -106,13 +111,19 @@ double Value_count(int *value) {
         res = res + i * value[i + 3];  //检测到是1，没检测到是0
         count = count + value[i + 3];
     }
+    if (count == 0){
+        res = last_value;
+        count = 1;
+    }
+    else{
+        last_value = res;
+    }
     Serial.print("now value count(with out /):");
     Serial.println(res);
-    if (count == 0) { count = 1; }
     Serial.print("count:");
     Serial.println(count);
     return_value = (res / count);
-    return res;
+    return return_value;
 }
 
 //pid控制   参数：   传感器数组
@@ -132,7 +143,8 @@ void Pid_control(int *value) {
     } else if (directions <= -3) {
         directions = -3;
     }
-    analogWrite(direc, map(directions, -3, 3, 0, 255));
+    analogWrite(direc,
+                (directions, -3, 3, 0, 255));
     Serial.print("now value count:");
     Serial.println(values[cycle]);
     Serial.print("direction:");
@@ -155,9 +167,86 @@ void Pid_control(int *value) {
 
 //设置电机转速
 void Run_motor(int speed_l, int speed_r) {
-    analogWrite(motor_l, speed_l);
-    analogWrite(motor_r, speed_r);
+    if(speed_l >= 0 && speed_r >= 0){
+        if(speed_l > 210){
+            speed_l =210;
+        }
+        else if(speed_l < 45){
+            speed_l = 45;
+        }
+        if(speed_r > 240){
+            speed_r =240;
+        }
+        else if(speed_r < 45){
+            speed_r = 45;
+        }
+        analogWrite(motor_l, speed_l);
+        analogWrite(motor_r, speed_r);
+        analogWrite(motor_l_f, 0);
+        analogWrite(motor_r_f, 0);
+    }
+    else if(speed_l < 0 && speed_r >= 0){
+        speed_l = -speed_l;
+        if(speed_l > 210){
+            speed_l =210;
+        }
+        else if(speed_l < 45){
+            speed_l = 45;
+        }
+        if(speed_r > 240){
+            speed_r =240;
+        }
+        else if(speed_r < 45){
+            speed_r = 45;
+        }
+        analogWrite(motor_l_f, speed_l);
+        analogWrite(motor_r, speed_r);
+        analogWrite(motor_l, 0);
+        analogWrite(motor_r_f, 0);
+    }
+    else if(speed_l >= 0 && speed_r < 0){
+        speed_r = - speed_r;
+        if(speed_l > 210){
+            speed_l =210;
+        }
+        else if(speed_l < 45){
+            speed_l = 45;
+        }
+        if(speed_r > 240){
+            speed_r =240;
+        }
+        else if(speed_r < 45){
+            speed_r = 45;
+        }
+        analogWrite(motor_l, speed_l);
+        analogWrite(motor_r_f, speed_r);
+        analogWrite(motor_l_f, 0);
+        analogWrite(motor_r, 0);
+    }
+    else if(speed_l < 0 && speed_r < 0){
+        speed_l = -speed_l;
+        speed_r = - speed_r;
+        if(speed_l > 210){
+            speed_l =210;
+        }
+        else if(speed_l < 45){
+            speed_l = 45;
+        }
+        if(speed_r > 240){
+            speed_r =240;
+        }
+        else if(speed_r < 45){
+            speed_r = 45;
+        }
+        analogWrite(motor_l_f, speed_l);
+        analogWrite(motor_r_f, speed_r);
+        analogWrite(motor_l, 0);
+        analogWrite(motor_r, 0);
+    }
 }
+
+
+
 void Run_direct(double pwm){
     analogWrite(direc, pwm);
 }
@@ -183,24 +272,19 @@ int *Get_value() {
 void go_front(){
     //int err;
     //Serial.println("----------------------");
-    Run_motor(front_motor,front_motor);
+    //emmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm这下有得忙了
+    int left_less = 0;
+    int right_less = 0;
+    if(direc_control >= 170){
+        right_less = ((direc_control-170) *motor_turn);
+    }
+    else if(direc_control <= 86){
+        left_less =((86 - direc_control)*motor_turn);
+    }
+
+    Run_motor(front_motor - right_less + left_less,front_motor -left_less + right_less);
     Run_direct(direc_control);
 
-}
-//旨在判断这坨屎目前的状态，写不下去了，想似
-void where_are_you(int *value) {
-    if (value[0] == 1 && value[1] != 1 && value[3] == 1) {
-        sharp_go_left();
-    } else if (value[6] == 1 && value[5] != 1 && value[3] == 1) {
-        sharp_go_right();
-    } else if (value[0] == 1 && value[1] == 1 && value[3] == 1 && value[6] != 1) {
-        go_left();
-    } else if (value[6] == 1 && value[5] == 1 && value[4] == 1 && value[0] != 1) {
-        go_right();
-    }
-    else{
-        go_front();
-    }
 }
 
 
@@ -242,6 +326,8 @@ void setup() {
     pinMode(motor_l, OUTPUT);
     pinMode(motor_r, OUTPUT);
     myPID.SetMode(AUTOMATIC);
+    myPID.SetOutputLimits(45,210);
+    myPID.SetSampleTime(50);
     // put your setup code here, to run once:
 }
 void loop() {
@@ -254,7 +340,8 @@ void loop() {
     Serial.println(fina);
     Serial.print("direct_conrtol:");
     Serial.println(direc_control);
-    where_are_you(value);
     free(value);
+    go_front();
+    delay(49);
     // put your main code here, to run repeatedly:
 }

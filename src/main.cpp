@@ -1,7 +1,6 @@
 //传感器
 #include "Arduino.h"
 #include "PID_v1.h"
-#include "math.h"
 #define sensor_0 A3
 #define sensor_r1 A4
 #define sensor_r2 A5
@@ -46,11 +45,11 @@
 //不思进取，只等开源（调用现成的库香到爆
 double door_ji = 0;//舵机的预期值
 double fina;//误差值
-double direc_control = 128;
+double direct_control = 128;
 double p_pid = 15;//28;//就是这个值可以让舵机在最左边传感器一个为黑的时候输出最左边值
 double i_pid = 0;//关掉！关掉！一定要关掉！
 double d_pid = 5;
-PID myPID(&fina, &direc_control, &door_ji, p_pid, i_pid, d_pid, REVERSE);
+PID myPID(&fina, &direct_control, &door_ji, p_pid, i_pid, d_pid, REVERSE);
 
 //锐角转弯函数
 void sharp_go_left() {
@@ -145,8 +144,7 @@ void Pid_control(int *value) {
     } else if (directions <= -3) {
         directions = -3;
     }
-    analogWrite(direc,
-                (directions, -3, 3, 0, 255));
+    analogWrite(direc,map(directions, -3, 3, 0, 255));
     Serial.print("now value count:");
     Serial.println(values[cycle]);
     Serial.print("direction:");
@@ -277,21 +275,21 @@ void go_front(){
     //emmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm这下有得忙了
     int left_less = 0;
     int right_less = 0;
-    if(direc_control >= 170){
-        right_less = ((direc_control-170) *motor_turn);
-        direc_control = 210;
+    if(direct_control >= 170){
+        right_less = ((direct_control - 170) * motor_turn);
+        direct_control = 210;
         Run_motor(-(motor_turn_go + right_less-test),motor_turn_go + right_less);
     }
-    else if(direc_control <= 86){
-        left_less =((86 - direc_control)*motor_turn);
-        direc_control = 45;
+    else if(direct_control <= 86){
+        left_less =((86 - direct_control) * motor_turn);
+        direct_control = 45;
         Run_motor(motor_turn_go + left_less,-(motor_turn_go + left_less-test));
     }
     else{
         // Run_motor(front_motor - right_less + left_less,front_motor -left_less + right_less);
         Run_motor(front_motor,front_motor);
     }
-    Run_direct(direc_control);
+    Run_direct(direct_control);
 
 }
 
@@ -346,8 +344,8 @@ void loop() {
     //Pid_control(value);
     Serial.print("fina:");
     Serial.println(fina);
-    Serial.print("direct_conrtol:");
-    Serial.println(direc_control);
+    Serial.print("direct_control:");
+    Serial.println(direct_control);
     free(value);
     go_front();
     delay(49);
